@@ -1,5 +1,6 @@
-from typing import List, NamedTuple, Optional, Any
-from collections import Counter
+from typing import List, NamedTuple, Optional, Dict
+from typing import TypeVar, Any
+from collections import Counter, defaultdict
 import math
 
 
@@ -34,7 +35,7 @@ def partition_entropy(subsets: List[List[Any]]) -> float:
     """Returns the entropy from this partition of data into subsets"""
     total_count = sum(len(subset) for subset in subsets)
 
-    return sum(data_entropy(subset) * len(subset / total_count)
+    return sum(data_entropy(subset) * len(subset) / total_count
                for subset in subsets)
 
 
@@ -62,3 +63,36 @@ inputs = [Candidate('Senior', 'Java',   False, False, False),
           Candidate('Junior', 'Python', False, True,  False)
           ]
 
+T = TypeVar("T")
+
+
+def partition_by(inputs: List[T], attribute: str) -> Dict[Any, List[T]]:
+    """Partition the inputs into lists based on the specified attribute."""
+    partitions: Dict[Any, List[T]] = defaultdict(list)
+    for input in inputs:
+        key = getattr(input, attribute)
+        partitions[key].append(input)
+    return partitions
+
+
+def partition_entropy_by(inputs: List[Any],
+                         attribute: str,
+                         label_attribute: str) -> float:
+    """Compute the entropy corresponding to the given partition"""
+    # partitions consist of our inputs
+    partitions = partition_by(inputs, attribute)
+
+    labels = [[getattr(input, label_attribute) for input in partition]
+              for partition in partitions.values()]
+
+    return partition_entropy(labels)
+
+
+for key in ["level", "lang", "tweets", "phd"]:
+    print(key, partition_entropy_by(inputs, key, "did_well"))
+
+
+assert 0.69 < partition_entropy_by(inputs, 'level', 'did_well') < 0.70
+assert 0.86 < partition_entropy_by(inputs, 'lang', 'did_well') < 0.87
+assert 0.78 < partition_entropy_by(inputs, 'tweets', 'did_well') < 0.79
+assert 0.89 < partition_entropy_by(inputs, 'phd', 'did_well') < 0.90
